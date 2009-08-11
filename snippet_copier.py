@@ -108,7 +108,8 @@ def unescape(text):
 
 class Snippet(object):
     """A generic snippet that can be tab-triggered."""
-    def __init__(self, trigger, content):
+    def __init__(self, name, trigger, content):
+        self.name    = name
         self.trigger = trigger
         self.content = content
 
@@ -126,7 +127,17 @@ class Snippet(object):
             filename += "." + str(i)
 
         snippet_file = open(filename, 'w')
-        snippet_file.write("# This was cloned from a TextMate bundle for "
+        # name :
+        # key : expand-key
+        # group : group
+        # contributor : crazycode@gmail.com
+        # --
+
+        snippet_file.write("# name : " + self.name +
+                           "\n# key : " + self.trigger +
+                           #"\n# group : your group" +
+                           "\n# contributor : crazycode@gmail.com" +
+                           "\n# This was cloned from a TextMate bundle for " +
                            "yasnippet.\n# --\n")
         snippet_file.write(self.content)
         snippet_file.close()
@@ -150,7 +161,7 @@ class TextMateBundle(object):
         soup = BeautifulSoup(snippet_file.read())
         snippet_file.close()
         return soup
-    
+
     def _snippet_uris(self):
         if not self.bundle_url:
             self.bundle_url = self.URI_BASE % self.bundle
@@ -163,7 +174,7 @@ class TextMateBundle(object):
 
     def set_bundle_url(self, bundle_url):
         self.bundle_url = str(bundle_url) + "Snippets/"
-        
+
     def download_snippets(self):
         snippets = []
         for uri in self._snippet_uris():
@@ -183,7 +194,7 @@ class TextMateBundle(object):
             except NotImplementedError:
                 pass
         return snippets
-                    
+
     def create_snippet(self, uri):
         soup = self._create_soup(uri)
         return self.process_soup(soup)
@@ -191,10 +202,11 @@ class TextMateBundle(object):
     def create_snippet_from_file(self, filename):
         soup = self._create_soup_from_file(filename)
         return self.process_soup(soup)
-    
+
     def process_soup(self, soup):
         try:
             return Snippet(
+                soup.find("name", text="tabTrigger").findNext("string").string,
                 soup.find("key", text="tabTrigger").findNext("string").string,
                 unescape(soup.find("key", text="content").findNext("string")
                          .string)
@@ -223,10 +235,10 @@ if __name__ == '__main__':
         p.error("path option not given")
     elif not os.path.exists(options.path) or not os.path.isdir(options.path):
         p.error("not a valid path")
-    
+
     if options.folder and not os.path.exists(options.folder):
         p.error("Folder of bundle doesn't exist")
-        
+
     bndl = TextMateBundle()
     if options.bundle:
         bndl.set_bundle_name(options.bundle)
@@ -234,7 +246,7 @@ if __name__ == '__main__':
         bndl.set_bundle_url(options.url)
     if options.folder:
         for snippet in bndl.load_snippets(options.folder):
-            snippet.save_as_yasnippet(options.path)            
+            snippet.save_as_yasnippet(options.path)
     else:
         for snippet in bndl.download_snippets():
             snippet.save_as_yasnippet(options.path)
